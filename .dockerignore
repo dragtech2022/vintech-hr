@@ -6,3 +6,7 @@ __pycache__
 .venv
 backups
 tests
+
+*.backup-*
+.env.*
+!.env.example
