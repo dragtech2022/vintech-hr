@@ -1,0 +1,34 @@
+name: vintech-hr-standalone
+services:
+  app:
+    build: .
+    image: vintech-hr-community:0.2.0
+    restart: unless-stopped
+    ports:
+      - "${HR_BIND_ADDRESS:-127.0.0.1}:${HR_PORT:-8088}:8000"
+    environment:
+      HR_DATABASE: /data/hr.sqlite3
+      HR_COOKIE_SECURE: ${HR_COOKIE_SECURE:-false}
+      TZ: Asia/Kolkata
+    volumes:
+      - hr_data:/data
+    read_only: true
+    tmpfs:
+      - /tmp:size=64m,mode=1777
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/healthz', timeout=5)"]
+      interval: 30s
+      timeout: 6s
+      retries: 3
+      start_period: 15s
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: "3"
+volumes:
+  hr_data:
