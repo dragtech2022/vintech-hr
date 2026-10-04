@@ -1,3 +1,11 @@
+# v0.3.0 — Company Master
+
+- Five-section company editor, searchable list, statutory/settings fields and salary heads.
+- Authenticated logo, policy and company-document uploads, metadata editing and archiving.
+- Additive database initialization, preserved existing records and activity logging.
+- Eight-character admin password minimum and a backed-up GitHub update script.
+- Company configuration only; payroll, email and automatic reminders remain unimplemented.
+
 # Changelog
 
 ## 0.2.0 — 2026-10-04

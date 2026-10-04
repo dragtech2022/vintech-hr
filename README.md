@@ -1,6 +1,10 @@
+# VINTECH HR Community v0.3.0
+
+Company Master is now included. See [COMPANY-MASTER.md](COMPANY-MASTER.md) for features, limitations and the backed-up GitHub upgrade procedure.
+
 # VINTECH HR Community 0.2.0
 
-Independent, self-hosted employee and shift management. MIT licensed. Runs on an Ubuntu server using Docker Compose, Python/Flask, Gunicorn and SQLite. No Frappe, ERPNext, VishvaHR, ChatGPT, cloud account, paid API, CDN or external frontend service is required at runtime.
+Independent, self-hosted company, employee and shift management. MIT licensed. Runs on an Ubuntu server using Docker Compose, Python/Flask, Gunicorn and SQLite. No Frappe, ERPNext, VishvaHR, ChatGPT, cloud account, paid API, CDN or external frontend service is required at runtime.
 
 This is the **employee and shift foundation**, not a complete payroll or biometric attendance system. This is a new standalone project, not an upgrade/installable release of the earlier `vintech_hr` Frappe add-on. Do not install it with `bench` or point it at an ERP database.
 
@@ -19,7 +23,7 @@ This is the **employee and shift foundation**, not a complete payroll or biometr
 
 ## Not included yet
 
-Biometric device connection, check-in storage, automatic shift selection, attendance calculation, shift overlap resolution, weekly-off/pay entitlement rules, effective-dated assignments, payroll, salary rates, leave, statutory returns, employee self-service, granular roles and file uploads. Settings saved in this release do **not** calculate attendance or salary. All created admin accounts have full access. Activity history records who changed which record; it is not a full before/after compliance audit.
+Biometric device connection, check-in storage, automatic shift selection, attendance calculation, shift overlap resolution, weekly-off/pay entitlement rules, effective-dated assignments, payroll, salary rates, leave, statutory returns, employee self-service, granular roles and employee document uploads. Settings saved in this release do **not** calculate attendance or salary. All created admin accounts have full access. Activity history records who changed which record; it is not a full before/after compliance audit.
 
 Build these next against confirmed business rules. Retain previous shift definitions or export configuration before changing historical rules once attendance processing is introduced. This version has no attendance history to recalculate.
 

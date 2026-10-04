@@ -9,25 +9,25 @@ async function api(path,method='GET',data){
  if(!response.ok){if(response.status===401&&path!='/api/login')showLogin();throw new Error(payload.error||'Request failed. Try again.');}
  return payload;
 }
-function showLogin(){csrf='';state={employees:[],shifts:[]};$('#employee-rows').replaceChildren();$('#shift-cards').replaceChildren();$('#activity-rows').replaceChildren();$('#editor').close();$('#editor-fields').replaceChildren();$('#workspace').hidden=true;$('#login-screen').hidden=false;}
+function showLogin(){clearCompanies();csrf='';state={employees:[],shifts:[]};$('#employee-rows').replaceChildren();$('#shift-cards').replaceChildren();$('#activity-rows').replaceChildren();$('#editor').close();$('#editor-fields').replaceChildren();$('#workspace').hidden=true;$('#login-screen').hidden=false;}
 function toast(message){$('#toast').textContent=message;$('#toast').hidden=false;setTimeout(()=>$('#toast').hidden=true,4000);}
 async function load(){
  $('#page-error').textContent='';$('#loading').hidden=false;
- try{state=await api('/api/data');render();}catch(e){$('#page-error').textContent=e.message;}finally{$('#loading').hidden=true;}
+ try{const result=await Promise.all([api('/api/data'),loadCompanies()]);state=result[0];render();}catch(e){$('#page-error').textContent=e.message;}finally{$('#loading').hidden=true;}
 }
 async function start(user){csrf=user.csrf;$('#username').textContent=user.username;$('#login-screen').hidden=true;$('#workspace').hidden=false;await load();}
 $('#login-form').addEventListener('submit',async e=>{e.preventDefault();const b=e.target.querySelector('button');b.disabled=true;$('#login-error').textContent='';try{await start(await api('/api/login','POST',Object.fromEntries(new FormData(e.target))));e.target.reset();}catch(err){$('#login-error').textContent=err.message;}finally{b.disabled=false;}});
 $('#logout').onclick=async()=>{try{await api('/api/logout','POST',{});showLogin();}catch(e){$('#page-error').textContent=e.message;}};
 function render(){
- view=['employees','shifts','activity'].includes(location.hash.slice(1))?location.hash.slice(1):'employees';
+ view=['companies','employees','shifts','activity'].includes(location.hash.slice(1))?location.hash.slice(1):'companies';
  document.querySelectorAll('nav a').forEach(a=>{a.classList.toggle('active',a.dataset.view===view);if(a.dataset.view===view)a.setAttribute('aria-current','page');else a.removeAttribute('aria-current');});
  const active=state.employees.filter(e=>e.status==='Active');
  $('#count-active').textContent=active.length;$('#count-monthly').textContent=active.filter(e=>e.pay_basis==='Monthly').length;$('#count-daily').textContent=active.filter(e=>e.pay_basis==='Daily').length;$('#count-shifts').textContent=state.shifts.filter(s=>s.active).length;
- for(const v of ['employees','shifts','activity'])$('#'+v+'-view').hidden=v!==view;
- $('#page-title').textContent={employees:'Employees',shifts:'Shift master',activity:'Activity log'}[view];
- $('#page-description').textContent={employees:'Manage your team and their allowed shifts.',shifts:'Define working hours for every day of the week.',activity:'A record of changes made by your administrators.'}[view];
- $('#export-button').hidden=view!=='employees';$('#add-button').hidden=view==='activity';$('#add-button').textContent=view==='shifts'?'+ Add shift':'+ Add employee';
- if(view==='employees')renderEmployees();if(view==='shifts')renderShifts();if(view==='activity')loadActivity();
+ for(const v of ['companies','employees','shifts','activity'])$('#'+v+'-view').hidden=v!==view;
+ $('#page-title').textContent={companies:'Company Master',employees:'Employees',shifts:'Shift master',activity:'Activity log'}[view];
+ $('#page-description').textContent={companies:'Company profiles, statutory settings and documents.',employees:'Manage your team and their allowed shifts.',shifts:'Define working hours for every day of the week.',activity:'A record of changes made by your administrators.'}[view];
+ $('#export-button').hidden=view!=='employees';$('#add-button').hidden=view==='activity';$('#add-button').textContent=view==='companies'?'+ Create company':view==='shifts'?'+ Add shift':'+ Add employee';
+ if(view==='companies')renderCompanies();if(view==='employees')renderEmployees();if(view==='shifts')renderShifts();if(view==='activity')loadActivity();
 }
 function renderEmployees(){
  const search=$('#search').value.toLowerCase(),status=$('#status-filter').value;
@@ -42,7 +42,7 @@ function renderShifts(){
  $('#shift-empty').hidden=state.shifts.length>0;
  $('#shift-cards').innerHTML=state.shifts.map(s=>{const enabled=s.schedule.filter(d=>d.enabled), first=enabled[0], uniform=enabled.every(d=>d.start===first.start&&d.end===first.end&&d.next_day===first.next_day),assigned=state.employees.filter(e=>e.shifts.includes(s.id)).length;return `<article class="shift-card"><div class="card-head"><span class="pill">${esc(s.code)}</span><span class="status ${!s.active?'inactive':''}">${s.active?'Active':'Inactive'}</span></div><h2>${esc(s.name)}</h2><p class="muted">${enabled.length} days per week · ${assigned} assigned employees</p><div class="timing">${uniform?`${esc(first.start)} – ${esc(first.end)}${first.next_day?' <span class="pill">Next day</span>':''}`:'Varies by weekday'}</div><p class="muted">${s.schedule.map((d,i)=>d.enabled?days[i].slice(0,3):null).filter(Boolean).join(' · ')}</p><dl><div><dt>Full-day minimum</dt><dd>${s.min_full} minutes</dd></div><div><dt>Half-day minimum</dt><dd>${s.min_half} minutes</dd></div><div><dt>Unpaid break</dt><dd>${s.lunch_minutes} minutes</dd></div><div><dt>Arrival window</dt><dd>−${s.arrival_before} / +${s.arrival_after} min</dd></div></dl><button class="edit" data-edit-shift="${s.id}">Edit shift</button></article>`;}).join('');
 }
-async function loadActivity(){try{const data=await api('/api/audit');$('#activity-rows').innerHTML=data.rows.length?data.rows.map(r=>`<tr><td>${esc(new Date(r.at*1000).toLocaleString('en-IN',{timeZone:'Asia/Kolkata'}))} IST</td><td>${esc(r.username)}</td><td>${r.action==='create'?'Created':'Updated'}</td><td>${esc(r.entity)} #${r.entity_id}</td></tr>`).join(''):'<tr><td colspan="4" class="muted">No changes recorded yet.</td></tr>';}catch(e){$('#page-error').textContent=e.message;}}
+async function loadActivity(){try{const data=await api('/api/audit');$('#activity-rows').innerHTML=data.rows.length?data.rows.map(r=>`<tr><td>${esc(new Date(r.at*1000).toLocaleString('en-IN',{timeZone:'Asia/Kolkata'}))} IST</td><td>${esc(r.username)}</td><td>${esc({create:'Created',update:'Updated',archive:'Archived'}[r.action]||r.action)}</td><td>${esc(r.entity)} #${r.entity_id}</td></tr>`).join(''):'<tr><td colspan="4" class="muted">No changes recorded yet.</td></tr>';}catch(e){$('#page-error').textContent=e.message;}}
 function field(label,name,value='',type='text',required=false,max=120){return `<label>${esc(label)}${required?' *':''}<input name="${name}" type="${type}" value="${esc(value)}" ${required?'required':''} ${['number','date','time'].includes(type)?'':`maxlength="${max}"`} ${type==='number'?'min="0" step="1" max="1440"':''}></label>`;}
 function select(label,name,options,value){return `<label>${esc(label)}<select name="${name}">${options.map(o=>`<option value="${esc(o)}" ${o===value?'selected':''}>${esc(o)}</option>`).join('')}</select></label>`;}
 function openEmployee(id){
@@ -70,8 +70,7 @@ $('#editor-form').onsubmit=async event=>{
  try{await api(`/api/${editor.type==='employee'?'employees':'shifts'}${editor.id?'/'+editor.id:''}`,editor.id?'PUT':'POST',data);$('#editor').close();toast(editor.type==='employee'?'Employee saved.':'Shift saved.');await load();}catch(e){$('#editor-error').textContent=e.message;}finally{busy=false;$('#save-editor').disabled=false;}
 };
 $('#search').oninput=renderEmployees;$('#status-filter').onchange=renderEmployees;
-$('#add-button').onclick=()=>view==='shifts'?openShift():openEmployee();$('#empty-add').onclick=()=>openEmployee();$('#empty-shift').onclick=()=>openShift();
+$('#add-button').onclick=()=>view==='companies'?openCompany():view==='shifts'?openShift():openEmployee();$('#empty-add').onclick=()=>openEmployee();$('#empty-shift').onclick=()=>openShift();
 $('#employee-rows').onclick=e=>{const b=e.target.closest('[data-edit-employee]');if(b)openEmployee(Number(b.dataset.editEmployee));};
 $('#shift-cards').onclick=e=>{const b=e.target.closest('[data-edit-shift]');if(b)openShift(Number(b.dataset.editShift));};
 window.addEventListener('hashchange',()=>{if(csrf)render();});
-api('/api/me').then(start).catch(showLogin);
