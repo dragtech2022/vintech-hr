@@ -21,9 +21,9 @@ elif args.command=='admin':
     username=input('Admin username: ').strip().lower()
     if not re.fullmatch(r'[a-z0-9_.-]{3,80}',username):
         raise SystemExit('Use 3–80 letters, numbers, dots, underscores or hyphens.')
-    password=getpass.getpass('New password (at least 12 characters): ')
-    if len(password)<12 or len(password)>256 or password!=password.strip() or any(ord(c)<32 for c in password):
-        raise SystemExit('Use 12–256 characters without leading/trailing spaces.')
+    password=getpass.getpass('New password (at least 8 characters): ')
+    if len(password)<8 or len(password)>256 or password!=password.strip() or any(ord(c)<32 for c in password):
+        raise SystemExit('Use 8–256 characters without leading/trailing spaces.')
     if password!=getpass.getpass('Confirm password: '):
         raise SystemExit('Passwords did not match.')
     with connect(path) as db:

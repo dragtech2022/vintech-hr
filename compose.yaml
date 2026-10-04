@@ -2,7 +2,7 @@ name: vintech-hr-standalone
 services:
   app:
     build: .
-    image: vintech-hr-community:0.2.0
+    image: vintech-hr-community:0.3.0
     restart: unless-stopped
     ports:
       - "${HR_BIND_ADDRESS:-127.0.0.1}:${HR_PORT:-8088}:8000"

@@ -1,0 +1,44 @@
+const {JSDOM}=require('jsdom');
+const fs=require('fs');
+const assert=require('assert');
+(async()=>{
+ const root=require('path').resolve(__dirname,'..');
+ const testURL=process.env.HR_TEST_URL||'http://127.0.0.1:18089/';
+ const html=await (await fetch(testURL)).text();
+ const dom=new JSDOM(html,{url:testURL,runScripts:'dangerously',pretendToBeVisual:true});
+ const w=dom.window,d=w.document;
+ let cookie='';const errors=[];
+ w.addEventListener('error',e=>errors.push(e.message));
+ w.confirm=()=>true;
+ w.HTMLDialogElement.prototype.showModal=function(){this.open=true;};
+ w.HTMLDialogElement.prototype.close=function(){this.open=false;};
+ w.fetch=async(path,options={})=>{const response=await fetch(new URL(path,w.location.href),{...options,headers:{...options.headers,...(cookie?{Cookie:cookie}:{})}});if(response.headers.get('set-cookie'))cookie=response.headers.get('set-cookie').split(';')[0];return response;};
+ for(const file of ['app.js','company.js']){const script=d.createElement('script');script.textContent=fs.readFileSync(root+'/static/'+file,'utf8');d.body.appendChild(script);}
+ const wait=async(test)=>{for(let i=0;i<150;i++){if(test())return;await new Promise(r=>setTimeout(r,20));}throw Error('Timed out: '+test+' '+d.querySelector('#company-error').textContent+' '+d.querySelector('#company-document-error').textContent);};
+ const submit=form=>form.dispatchEvent(new w.Event('submit',{bubbles:true,cancelable:true}));
+ await wait(()=>!d.querySelector('#login-screen').hidden);
+ const login=d.querySelector('#login-form');login.elements.username.value='admin';login.elements.password.value='test-password-123';submit(login);
+ await wait(()=>d.querySelector('#page-title').textContent==='Company Master');
+ d.querySelector('#add-button').click();assert(d.querySelector('#company-editor').open);
+ const form=d.querySelector('#company-form');form.elements.company_no.value='UI01';form.elements.short_name.value='DEMO';form.elements.name.value='UI Company';form.elements.address.value='Line 1\nLine 2';
+ for(const tab of ['statutory','heads','other','documents','details']){d.querySelector(`[data-company-tab="${tab}"]`).click();assert(!d.querySelector(`[data-company-panel="${tab}"]`).hidden);}
+ form.elements.pf_limit.value='25000';form.elements.allowance_1_short.value='HRA';form.elements.manager_name.value='Example Manager';submit(form);
+ await wait(()=>d.querySelector('#company-rows').textContent.includes('UI Company'));
+ assert(!d.querySelector('#company-document-controls').hidden);
+ d.querySelector('[data-company-tab="documents"]').click();
+ const df=d.querySelector('#company-document-form');df.elements.document_type.value='Policy test';
+ const file=new w.File(['%PDF-1.4\nDocument fixture'],'sample.pdf',{type:'application/pdf'});Object.defineProperty(df.elements.file,'files',{value:[file],configurable:true});submit(df);
+ await wait(()=>d.querySelector('#company-document-rows').textContent.includes('sample.pdf'));
+ d.querySelector('[data-edit-document]').click();df.elements.remark.value='Updated note';Object.defineProperty(df.elements.file,'files',{value:[],configurable:true});submit(df);
+ await wait(()=>d.querySelector('#save-company-document').textContent==='Upload document'&&!d.querySelector('#save-company-document').disabled);
+ d.querySelector('[data-company-tab="details"]').click();form.elements.city.value='Ahmedabad';submit(form);
+ await wait(()=>d.querySelector('#company-rows').textContent.includes('Ahmedabad'));
+ d.querySelector('#close-company').click();assert(!d.querySelector('#company-editor').open);
+ d.querySelector('[data-edit-company]').click();assert.equal(form.elements.allowance_1_short.value,'HRA');assert.equal(form.elements.pf_limit.value,'25000');assert.equal(form.elements.address.value,'Line 1\nLine 2');
+ d.querySelector('#close-company').click();
+ w.location.hash='#employees';await wait(()=>d.querySelector('#page-title').textContent==='Employees');d.querySelector('#add-button').click();assert(d.querySelector('#editor').open);d.querySelector('#cancel-editor').click();
+ w.location.hash='#shifts';await wait(()=>d.querySelector('#page-title').textContent==='Shift master');d.querySelector('#add-button').click();assert(d.querySelector('#editor').open);d.querySelector('#cancel-editor').click();
+ d.querySelector('#logout').click();await wait(()=>!d.querySelector('#login-screen').hidden);assert.equal(d.querySelector('#company-fields').children.length,0);
+ assert.deepEqual(errors,[]);console.log('PASS: DOM + live API login, tabs, create, settings persistence, document upload/edit, company edit, employee/shift navigation, logout cleanup.');
+ dom.window.close();
+})().catch(e=>{console.error(e);process.exit(1);});

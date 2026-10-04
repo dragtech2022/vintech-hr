@@ -78,7 +78,7 @@ Expected JSON includes `"status":"ok"` and version `0.2.0`. The first build need
 docker compose exec app python manage.py admin
 ```
 
-Enter a username and a password of at least 12 characters. The password input is hidden. There is no shipped default password. Running this command for an existing username resets its password and revokes that account's sessions.
+Enter a username and a password of at least 8 characters. The password input is hidden. There is no shipped default password. Running this command for an existing username resets its password and revokes that account's sessions.
 
 ## 6. Open it privately — Windows PowerShell
 

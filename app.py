@@ -14,7 +14,8 @@ from flask import Flask, g, jsonify, render_template, request, make_response
 from werkzeug.security import check_password_hash, generate_password_hash
 from werkzeug.exceptions import HTTPException
 
-VERSION = '0.2.0'
+VERSION = '0.3.0'
+from company import SCHEMA as COMPANY_SCHEMA, register_company
 DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
 SCHEMA = '''
 CREATE TABLE IF NOT EXISTS schema_version(version INTEGER NOT NULL);
@@ -41,12 +42,13 @@ def init_db(path):
     with connect(path) as db:
         db.execute('PRAGMA journal_mode=WAL')
         db.executescript(SCHEMA)
+        db.executescript(COMPANY_SCHEMA)
         if db.execute('SELECT version FROM schema_version').fetchone()[0] != 1:
             raise RuntimeError('Unsupported database version; restore matching application release.')
 
 def create_app(config=None):
     app = Flask(__name__)
-    app.config.update(DATABASE=os.getenv('HR_DATABASE', '/data/hr.sqlite3'), COOKIE_SECURE=os.getenv('HR_COOKIE_SECURE', 'true').lower() == 'true', MAX_CONTENT_LENGTH=32768)
+    app.config.update(DATABASE=os.getenv('HR_DATABASE', '/data/hr.sqlite3'), COOKIE_SECURE=os.getenv('HR_COOKIE_SECURE', 'true').lower() == 'true', MAX_CONTENT_LENGTH=6*1024*1024)
     if config:
         app.config.update(config)
 
@@ -313,4 +315,5 @@ def create_app(config=None):
     def history():
         return jsonify(rows=[dict(r) for r in db().execute('SELECT * FROM audit ORDER BY id DESC LIMIT 100')])
 
+    register_company(app, db, body, error, audit, number)
     return app
